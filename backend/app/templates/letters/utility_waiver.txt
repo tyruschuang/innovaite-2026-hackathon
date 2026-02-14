@@ -1,0 +1,32 @@
+{{ date }}
+
+{{ utility_company }}
+{{ utility_address }}
+
+RE: Request for Late-Fee Waiver and Payment Extension — FEMA Disaster Declaration {{ disaster_id }}
+
+Dear Customer Service,
+
+I am writing to request a waiver of any late fees and a temporary extension on utility payments for my account at {{ business_address }}.
+
+Our business, {{ business_name }}, has been directly impacted by {{ declaration_title }}, officially declared a federal disaster under FEMA Declaration {{ disaster_id }}. We have been unable to operate normally for {{ days_closed }} days due to this disaster.
+
+{{ hardship_paragraph }}
+
+Many utility companies offer disaster relief programs for affected customers. I am requesting:
+
+1. Waiver of any late payment fees incurred since the disaster
+2. A {{ days_requested }}-day extension on current and upcoming payments
+3. Information about any disaster-specific assistance programs you may offer
+
+I am actively pursuing federal disaster relief to restore our business operations and will resume normal payment as soon as possible.
+
+Please contact me at {{ phone }} or {{ email }} to discuss available options.
+
+Thank you for your understanding during this difficult time.
+
+Sincerely,
+
+{{ owner_name }}
+{{ business_name }}
+Account at: {{ business_address }}

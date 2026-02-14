@@ -1,0 +1,50 @@
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.config import get_settings
+from app.routers import eligibility, runway, evidence, packet, plan
+
+
+def create_app() -> FastAPI:
+    settings = get_settings()
+
+    app = FastAPI(
+        title="ReliefBridge API",
+        description="Money-in-hand fastest path generator for disaster-impacted small businesses and nonprofits.",
+        version="0.1.0",
+    )
+
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Routers
+    app.include_router(eligibility.router, prefix="/eligibility", tags=["Eligibility"])
+    app.include_router(runway.router, prefix="/runway", tags=["Runway"])
+    app.include_router(evidence.router, prefix="/ai/evidence", tags=["Evidence AI"])
+    app.include_router(packet.router, prefix="/packet", tags=["Packet"])
+    app.include_router(plan.router, prefix="/plan", tags=["Plan"])
+
+    # Health check
+    @app.get("/health")
+    async def health():
+        return {"status": "ok"}
+
+    # Global exception handler
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error: {str(exc)}"},
+        )
+
+    return app
+
+
+app = create_app()

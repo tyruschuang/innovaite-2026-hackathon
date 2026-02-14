@@ -1,0 +1,32 @@
+{{ date }}
+
+{{ lender_name }}
+{{ lender_address }}
+
+RE: Request for Payment Terms Extension — FEMA Disaster Declaration {{ disaster_id }}
+
+Dear {{ lender_name }},
+
+I am writing to request a temporary extension of payment terms on our account with your organization. Our business, {{ business_name }}, has been directly impacted by {{ declaration_title }}, officially declared a federal disaster under FEMA Declaration {{ disaster_id }}.
+
+Due to this disaster, our business has been closed for {{ days_closed }} days, significantly impacting our cash flow and ability to meet current payment obligations on schedule.
+
+{{ hardship_paragraph }}
+
+I am requesting an extension of {{ days_requested }} days on all outstanding and upcoming invoices. This will allow us time to:
+
+- Resume business operations
+- Process insurance claims
+- Access federal disaster relief programs (SBA disaster loans, FEMA assistance)
+
+I am committed to maintaining our business relationship and meeting our financial obligations. I have attached documentation of the disaster impact and our current financial situation for your review.
+
+Please contact me at {{ phone }} or {{ email }} to discuss a modified payment arrangement that works for both parties.
+
+Thank you for your consideration and support during this challenging time.
+
+Sincerely,
+
+{{ owner_name }}
+{{ business_name }}
+{{ business_address }}

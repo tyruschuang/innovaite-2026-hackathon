@@ -1,0 +1,26 @@
+{{ date }}
+
+{{ landlord_name }}
+{{ landlord_address }}
+
+RE: Request for Temporary Rent Forbearance — FEMA Disaster Declaration {{ disaster_id }}
+
+Dear {{ landlord_name }},
+
+I am writing to respectfully request a temporary forbearance on rent payments for the property located at {{ business_address }}. As you may be aware, our area was recently impacted by {{ declaration_title }}, which has been officially declared a federal disaster under FEMA Declaration {{ disaster_id }}.
+
+{{ business_name }} has been directly affected by this disaster, resulting in {{ days_closed }} days of business closure. Our {{ num_employees }} employees depend on the continued operation of this business.
+
+{{ hardship_paragraph }}
+
+I am respectfully requesting a {{ days_requested }}-day deferral of rent payments, beginning {{ start_date }}. During this time, I am actively pursuing all available disaster relief programs, including SBA disaster loans, to ensure the long-term viability of our tenancy.
+
+I remain committed to fulfilling our lease obligations and am happy to discuss a modified payment schedule that works for both parties. I have attached supporting documentation including a damage summary and expense ledger for your reference.
+
+Please feel free to contact me at {{ phone }} or {{ email }} to discuss this request.
+
+Sincerely,
+
+{{ owner_name }}
+{{ business_name }}
+{{ business_address }}
