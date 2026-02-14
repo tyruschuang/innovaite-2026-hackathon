@@ -1,6 +1,7 @@
 """Submission Packet Builder — generates PDFs and assembles the ZIP bundle.
 
 Produces:
+  - OverallSummary.pdf (holistic overview, steps, resources)
   - CoverSheet.pdf
   - DamageSummary.pdf
   - ExpenseLedger.pdf + ExpenseLedger.csv
@@ -30,15 +31,19 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from app.models.actions import ChecklistItem
 from app.models.evidence import DamageClaim, ExpenseItem, MissingEvidence, RenameEntry
 from app.models.inputs import Declaration, PacketBuildRequest, UserInfo
-from app.models.outputs import PacketFileEntry, ResultsSummary
+from app.models.outputs import DeferrableEstimate, PacketFileEntry, ResultsSummary
 from app.services.letters import render_all_letters
+from app.services.runway import calculate_runway
+from app.services.sequencer import generate_plan
 
 logger = logging.getLogger(__name__)
 
 # Path or prefix -> short description for results UI
 FILE_DESCRIPTIONS: dict[str, str] = {
+    "OverallSummary.pdf": "Read-first holistic overview, steps, and resources",
     "CoverSheet.pdf": "Business info & disaster ID",
     "DamageSummary.pdf": "Bullet-point damage overview",
     "ExpenseLedger.csv": "Categorized expense data",
@@ -47,6 +52,25 @@ FILE_DESCRIPTIONS: dict[str, str] = {
     "Evidence/": "Evidence file",
     "Letters/": "Forbearance or waiver letter",
 }
+
+# Curated resource links for the Overall Summary PDF
+RESOURCE_LINKS: list[dict[str, str]] = [
+    {
+        "name": "SBA Disaster Loan Assistance",
+        "url": "https://disasterloanassistance.sba.gov/",
+        "description": "Apply for SBA disaster loans",
+    },
+    {
+        "name": "FEMA Disaster Assistance",
+        "url": "https://www.disasterassistance.gov/",
+        "description": "Register for FEMA assistance (or call 1-800-621-3362)",
+    },
+    {
+        "name": "USA.gov disaster recovery",
+        "url": "https://www.usa.gov/disaster-recovery",
+        "description": "Federal disaster recovery resources",
+    },
+]
 
 
 def _description_for_path(path: str) -> str:
@@ -323,6 +347,123 @@ def _text_to_pdf(text: str, title: str) -> bytes:
     return buf.getvalue()
 
 
+def _build_overall_summary_pdf(
+    request: PacketBuildRequest,
+    deferrable_estimates: list[DeferrableEstimate],
+    checklist: list[ChecklistItem],
+    total_expenses: float,
+) -> bytes:
+    """Generate OverallSummary.pdf: holistic overview, numbers, what to ask for, steps, where to send, resources."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=0.75 * inch)
+    story = []
+
+    business_name = request.user_info.business_name or "Your business"
+    disaster_id = request.disaster_id or "N/A"
+    need_2_4_weeks = request.daily_burn * 21 if request.daily_burn else 0
+
+    # 1. Title and overview
+    story.append(Paragraph("Overall Summary — ReliefBridge Submission Packet", TITLE_STYLE))
+    story.append(Paragraph(
+        f"Generated: {datetime.now().strftime('%B %d, %Y')}",
+        BODY_STYLE,
+    ))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(
+        f"This packet supports <b>{business_name}</b> for disaster declaration <b>{disaster_id}</b>. "
+        "Use it for relief applications and immediate runway actions (forbearance, waivers, SBA, FEMA).",
+        BODY_STYLE,
+    ))
+    story.append(Spacer(1, 16))
+
+    # 2. Your numbers
+    story.append(Paragraph("Your Numbers", HEADING_STYLE))
+    numbers_data = [
+        ["Cash on hand", f"${request.runway.cash_on_hand:,.2f}"],
+        ["Monthly rent", f"${request.runway.monthly_rent:,.2f}"],
+        ["Monthly payroll", f"${request.runway.monthly_payroll:,.2f}"],
+        ["Daily burn rate", f"${request.daily_burn:,.2f}"],
+        ["Estimated runway", f"{request.runway_days:.1f} days"],
+        ["Total documented expenses (from evidence)", f"${total_expenses:,.2f}"],
+        ["Damage claims in packet", str(len(request.damage_claims))],
+    ]
+    if need_2_4_weeks > 0:
+        numbers_data.append(["Estimated 2–4 week need (reference)", f"~${need_2_4_weeks:,.0f}"])
+    t = Table(numbers_data, colWidths=[3.5 * inch, 3 * inch])
+    t.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 16))
+
+    # 3. What to ask for
+    story.append(Paragraph("What to Ask For", HEADING_STYLE))
+    for est in deferrable_estimates:
+        story.append(Paragraph(f"<b>{est.category}</b>", BODY_STYLE))
+        story.append(Paragraph(f"   {est.description}", BODY_STYLE))
+        story.append(Spacer(1, 4))
+    story.append(Spacer(1, 8))
+
+    # 4. Steps towards action
+    story.append(Paragraph("Steps Towards Action", HEADING_STYLE))
+    for item in checklist:
+        line = f"<b>{item.step_number}. {item.title}</b> — Time: {item.time_estimate_min} min."
+        if item.attached_file:
+            line += f" Attach: {item.attached_file}"
+        story.append(Paragraph(line, BODY_STYLE))
+        story.append(Paragraph(f"   Why: {item.why}", BODY_STYLE))
+        story.append(Spacer(1, 4))
+    story.append(Spacer(1, 8))
+
+    # 5. Where to send these documents
+    story.append(Paragraph("Where to Send These Documents", HEADING_STYLE))
+    send_data = [
+        ["Document / Letter", "Send to"],
+        ["Landlord forbearance letter (Letters/)", "Landlord or property manager"],
+        ["Utility waiver letter (Letters/)", "Your utility company"],
+        ["Lender extension letter (Letters/)", "Each vendor or lender"],
+        [
+            "Cover sheet + Damage summary + Expense ledger + Evidence",
+            f"SBA disaster loan application (reference disaster {disaster_id})",
+        ],
+        [
+            "Same packet elements + FEMA registration",
+            "FEMA — disasterassistance.gov or 1-800-621-3362",
+        ],
+    ]
+    t2 = Table(send_data, colWidths=[3 * inch, 3.5 * inch])
+    t2.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4472C4")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    story.append(t2)
+    story.append(Spacer(1, 16))
+
+    # 6. Resources and links
+    story.append(Paragraph("Resources and Links", HEADING_STYLE))
+    for link in RESOURCE_LINKS:
+        story.append(Paragraph(f"<b>{link['name']}</b> — {link['description']}", BODY_STYLE))
+        story.append(Paragraph(f"   {link['url']}", BODY_STYLE))
+        story.append(Spacer(1, 4))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(
+        "This summary is for guidance only; confirm amounts and programs with the agencies.",
+        ParagraphStyle("Disclaimer", parent=BODY_STYLE, fontSize=8, textColor=colors.grey),
+    ))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
 async def build_packet(
     request: PacketBuildRequest,
 ) -> tuple[bytes, list[PacketFileEntry], ResultsSummary]:
@@ -356,7 +497,40 @@ async def build_packet(
     rendered_letters = await render_all_letters(letter_vars)
     letter_count = len(rendered_letters) * 2  # .txt and .pdf per letter
 
+    # Data for OverallSummary.pdf: deferrable estimates, action checklist, total expenses
+    runway_result = calculate_runway(
+        monthly_rent=request.runway.monthly_rent,
+        monthly_payroll=request.runway.monthly_payroll,
+        cash_on_hand=request.runway.cash_on_hand,
+        days_closed=request.runway.days_closed,
+        num_employees=request.runway.num_employees,
+    )
+    deferrable_estimates = runway_result["deferrable_estimates"]
+    action_checklist = generate_plan(
+        business_type=request.runway.business_type,
+        monthly_rent=request.runway.monthly_rent,
+        monthly_payroll=request.runway.monthly_payroll,
+        daily_burn=request.daily_burn,
+        runway_days=request.runway_days,
+        disaster_id=request.disaster_id,
+        has_landlord=True,
+        has_utilities=True,
+        has_lender=True,
+        has_insurance=True,
+    )
+    total_expenses = sum(e.amount for e in request.expense_items)
+
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # 0. OverallSummary.pdf (read this first)
+        overall_pdf = _build_overall_summary_pdf(
+            request=request,
+            deferrable_estimates=deferrable_estimates,
+            checklist=action_checklist,
+            total_expenses=total_expenses,
+        )
+        zf.writestr("OverallSummary.pdf", overall_pdf)
+        files_included_paths.append("OverallSummary.pdf")
+
         # 1. CoverSheet.pdf
         cover = _build_cover_sheet(
             user_info=request.user_info,

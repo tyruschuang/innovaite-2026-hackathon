@@ -1,5 +1,0 @@
-{"location": "routers/eligibility.py", "message": "endpoint_hit", "data": {"county": "Alameda", "state": "CA"}, "hypothesisId": "H1,H5", "timestamp": 1771106139783}
-{"location":"api.ts:lookupEligibility","message":"fetch_start","data":{"county":"Alameda","state":"CA","apiBase":"http://127.0.0.1:8000"},"timestamp":1771106139779,"hypothesisId":"H1,H5"}
-{"location": "routers/eligibility.py", "message": "fema_result", "data": {"disaster_id": "4699", "num_declarations": 20}, "hypothesisId": "H2,H3", "timestamp": 1771106140193}
-{"location": "routers/eligibility.py", "message": "returning_success", "data": {"disaster_id": "4699", "programs": ["Hazard Mitigation", "Individual Assistance", "Individual and Households", "Public Assistance"]}, "hypothesisId": "H1", "timestamp": 1771106140193}
-{"location":"api.ts:lookupEligibility","message":"fetch_response","data":{"status":200,"statusText":"OK","ok":true},"timestamp":1771106140195,"hypothesisId":"H2,H3,H4,H5"}
