@@ -38,6 +38,31 @@ class EvidenceExtractionResponse(BaseModel):
     missing_evidence: list[MissingEvidence] = []
 
 
+class PacketFileEntry(BaseModel):
+    path: str = Field(..., description="Path of the file in the ZIP")
+    description: str = Field(..., description="Short description for UI display")
+
+
+class ResultsSummary(BaseModel):
+    damage_claim_count: int = Field(..., description="Number of damage claims in the packet")
+    expense_count: int = Field(..., description="Number of expense items in the packet")
+    letter_count: int = Field(..., description="Number of letter documents (e.g. 3 letter types x 2 formats)")
+    runway_days: float = Field(..., description="Estimated runway in days")
+    business_name: str = Field(..., description="Business name from the packet")
+    disaster_id: str = Field(..., description="FEMA disaster declaration ID")
+    one_line_summary: str = Field(
+        ...,
+        description="Template-based one-line summary for the results page",
+    )
+
+
+class PacketBuildResponse(BaseModel):
+    zip_base64: str = Field(..., description="ZIP file content as base64")
+    filename: str = Field(..., description="Suggested download filename")
+    results_summary: ResultsSummary
+    files_included: list[PacketFileEntry]
+
+
 class PacketResponse(BaseModel):
     download_url: str = Field(
         ..., description="URL to download the generated ZIP packet"

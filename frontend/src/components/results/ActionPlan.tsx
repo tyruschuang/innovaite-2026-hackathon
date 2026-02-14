@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { ChecklistItem } from "@/lib/types";
+import { ACTION_PLAN_TITLE } from "@/lib/copy";
 import {
   Clock,
   Copy,
@@ -52,7 +53,7 @@ export function ActionPlan({ checklist }: ActionPlanProps) {
             <Zap className="h-5 w-5 text-amber" />
           </div>
           <h2 className="text-xl font-bold text-foreground tracking-tight">
-            30-Minute Action Plan
+            {ACTION_PLAN_TITLE}
           </h2>
         </div>
         <Badge variant="info" size="md">

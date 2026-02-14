@@ -6,11 +6,12 @@ import { ActionPlan } from "./ActionPlan";
 import { PacketSummary } from "./PacketSummary";
 import { Button } from "@/components/ui/Button";
 import { Particles } from "@/components/magicui/Particles";
-import { RotateCcw, PartyPopper, Sparkles } from "lucide-react";
+import { RotateCcw, PartyPopper } from "lucide-react";
+import { RESULTS_HEADLINE, RESULTS_SUBTITLE } from "@/lib/copy";
 
 export function ResultsView() {
   const { state, dispatch } = useWizard();
-  const { planResult, packetBlob, packetFilename } = state;
+  const { planResult, packetBlob, packetFilename, resultsSummary, filesIncluded } = state;
 
   return (
     <div className="min-h-screen bg-muted/30 relative">
@@ -41,7 +42,7 @@ export function ResultsView() {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight mb-3"
           >
-            Your relief packet is ready!
+            {RESULTS_HEADLINE}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -49,8 +50,7 @@ export function ResultsView() {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="text-muted-foreground max-w-lg mx-auto text-lg"
           >
-            Download your submission-ready ZIP and follow the action plan below
-            to maximize your runway in the next 30 minutes.
+            {resultsSummary?.one_line_summary ?? RESULTS_SUBTITLE}
           </motion.p>
         </div>
       </div>
@@ -82,6 +82,8 @@ export function ResultsView() {
                 runwayDays={state.runwayResult?.runway_days}
                 businessName={state.userInfo.business_name}
                 disasterId={state.eligibilityResult?.disaster_id}
+                resultsSummary={resultsSummary}
+                filesIncluded={filesIncluded}
               />
 
               {/* Start over */}

@@ -102,6 +102,28 @@ export interface EvidenceExtractionResponse {
 
 // --- Packet ---
 
+export interface PacketFileEntry {
+  path: string;
+  description: string;
+}
+
+export interface ResultsSummary {
+  damage_claim_count: number;
+  expense_count: number;
+  letter_count: number;
+  runway_days: number;
+  business_name: string;
+  disaster_id: string;
+  one_line_summary: string;
+}
+
+export interface PacketBuildResponse {
+  zip_base64: string;
+  filename: string;
+  results_summary: ResultsSummary;
+  files_included: PacketFileEntry[];
+}
+
 export interface UserInfo {
   business_name: string;
   owner_name: string;

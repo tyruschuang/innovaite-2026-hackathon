@@ -32,9 +32,31 @@ from reportlab.platypus import (
 
 from app.models.evidence import DamageClaim, ExpenseItem, MissingEvidence, RenameEntry
 from app.models.inputs import Declaration, PacketBuildRequest, UserInfo
+from app.models.outputs import PacketFileEntry, ResultsSummary
 from app.services.letters import render_all_letters
 
 logger = logging.getLogger(__name__)
+
+# Path or prefix -> short description for results UI
+FILE_DESCRIPTIONS: dict[str, str] = {
+    "CoverSheet.pdf": "Business info & disaster ID",
+    "DamageSummary.pdf": "Bullet-point damage overview",
+    "ExpenseLedger.csv": "Categorized expense data",
+    "ExpenseLedger.pdf": "Formatted expense report",
+    "EvidenceChecklist.pdf": "What's included & what's missing",
+    "Evidence/": "Evidence file",
+    "Letters/": "Forbearance or waiver letter",
+}
+
+
+def _description_for_path(path: str) -> str:
+    """Return a short description for a packet file path."""
+    if path in FILE_DESCRIPTIONS:
+        return FILE_DESCRIPTIONS[path]
+    for prefix, desc in FILE_DESCRIPTIONS.items():
+        if path.startswith(prefix):
+            return desc
+    return "Packet file"
 
 styles = getSampleStyleSheet()
 TITLE_STYLE = ParagraphStyle(
@@ -301,15 +323,38 @@ def _text_to_pdf(text: str, title: str) -> bytes:
     return buf.getvalue()
 
 
-async def build_packet(request: PacketBuildRequest) -> tuple[bytes, list[str]]:
+async def build_packet(
+    request: PacketBuildRequest,
+) -> tuple[bytes, list[PacketFileEntry], ResultsSummary]:
     """
     Build the full submission packet ZIP.
 
     Returns:
-        (zip_bytes, list_of_files_included)
+        (zip_bytes, files_included with descriptions, results_summary)
     """
-    files_included: list[str] = []
+    files_included_paths: list[str] = []
     zip_buf = io.BytesIO()
+
+    letter_vars = {
+        "business_name": request.user_info.business_name,
+        "owner_name": request.user_info.owner_name,
+        "business_address": request.user_info.address,
+        "phone": request.user_info.phone,
+        "email": request.user_info.email,
+        "disaster_id": request.disaster_id,
+        "declaration_title": (
+            request.declarations[0].declaration_title
+            if request.declarations
+            else "the recent disaster"
+        ),
+        "days_closed": request.runway.days_closed,
+        "num_employees": request.runway.num_employees,
+        "monthly_rent": request.runway.monthly_rent,
+        "monthly_payroll": request.runway.monthly_payroll,
+        "business_type": request.runway.business_type,
+    }
+    rendered_letters = await render_all_letters(letter_vars)
+    letter_count = len(rendered_letters) * 2  # .txt and .pdf per letter
 
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         # 1. CoverSheet.pdf
@@ -326,28 +371,28 @@ async def build_packet(request: PacketBuildRequest) -> tuple[bytes, list[str]]:
             business_type=request.runway.business_type,
         )
         zf.writestr("CoverSheet.pdf", cover)
-        files_included.append("CoverSheet.pdf")
+        files_included_paths.append("CoverSheet.pdf")
 
         # 2. DamageSummary.pdf
         damage_pdf = _build_damage_summary(request.damage_claims)
         zf.writestr("DamageSummary.pdf", damage_pdf)
-        files_included.append("DamageSummary.pdf")
+        files_included_paths.append("DamageSummary.pdf")
 
         # 3. ExpenseLedger.csv + ExpenseLedger.pdf
         ledger_csv = _build_expense_ledger_csv(request.expense_items)
         zf.writestr("ExpenseLedger.csv", ledger_csv)
-        files_included.append("ExpenseLedger.csv")
+        files_included_paths.append("ExpenseLedger.csv")
 
         ledger_pdf = _build_expense_ledger_pdf(request.expense_items)
         zf.writestr("ExpenseLedger.pdf", ledger_pdf)
-        files_included.append("ExpenseLedger.pdf")
+        files_included_paths.append("ExpenseLedger.pdf")
 
         # 4. EvidenceChecklist.pdf
         checklist = _build_evidence_checklist(
             request.rename_map, request.missing_evidence
         )
         zf.writestr("EvidenceChecklist.pdf", checklist)
-        files_included.append("EvidenceChecklist.pdf")
+        files_included_paths.append("EvidenceChecklist.pdf")
 
         # 5. Evidence/ folder with standardized filenames
         rename_lookup = {
@@ -360,40 +405,42 @@ async def build_packet(request: PacketBuildRequest) -> tuple[bytes, list[str]]:
                 new_name = rename_lookup.get(original_fn, original_fn)
                 path = f"Evidence/{new_name}"
                 zf.writestr(path, file_bytes)
-                files_included.append(path)
+                files_included_paths.append(path)
             except Exception as e:
                 logger.warning(f"Failed to include evidence file {original_fn}: {e}")
 
         # 6. Letters/ folder
-        letter_vars = {
-            "business_name": request.user_info.business_name,
-            "owner_name": request.user_info.owner_name,
-            "business_address": request.user_info.address,
-            "phone": request.user_info.phone,
-            "email": request.user_info.email,
-            "disaster_id": request.disaster_id,
-            "declaration_title": (
-                request.declarations[0].declaration_title
-                if request.declarations
-                else "the recent disaster"
-            ),
-            "days_closed": request.runway.days_closed,
-            "num_employees": request.runway.num_employees,
-            "monthly_rent": request.runway.monthly_rent,
-            "monthly_payroll": request.runway.monthly_payroll,
-            "business_type": request.runway.business_type,
-        }
-
-        rendered_letters = await render_all_letters(letter_vars)
         for letter_name, letter_text in rendered_letters.items():
-            # Save as both .txt and .pdf
             txt_path = f"Letters/{letter_name}.txt"
             zf.writestr(txt_path, letter_text)
-            files_included.append(txt_path)
+            files_included_paths.append(txt_path)
 
             pdf_bytes = _text_to_pdf(letter_text, letter_name.replace("_", " ").title())
             pdf_path = f"Letters/{letter_name}.pdf"
             zf.writestr(pdf_path, pdf_bytes)
-            files_included.append(pdf_path)
+            files_included_paths.append(pdf_path)
 
-    return zip_buf.getvalue(), files_included
+    files_included = [
+        PacketFileEntry(path=p, description=_description_for_path(p))
+        for p in files_included_paths
+    ]
+    business_name = request.user_info.business_name or "Your business"
+    disaster_id = request.disaster_id or "N/A"
+    damage_claim_count = len(request.damage_claims)
+    expense_count = len(request.expense_items)
+    runway_days = request.runway_days
+    one_line_summary = (
+        f"Submission packet for {business_name} (Disaster {disaster_id}): "
+        f"{damage_claim_count} damage claim(s), {expense_count} expense(s), "
+        f"{runway_days:.0f} days runway."
+    )
+    results_summary = ResultsSummary(
+        damage_claim_count=damage_claim_count,
+        expense_count=expense_count,
+        letter_count=letter_count,
+        runway_days=runway_days,
+        business_name=business_name,
+        disaster_id=disaster_id,
+        one_line_summary=one_line_summary,
+    )
+    return zip_buf.getvalue(), files_included, results_summary
