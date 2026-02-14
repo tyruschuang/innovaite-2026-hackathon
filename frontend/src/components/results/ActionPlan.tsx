@@ -111,7 +111,7 @@ export function ActionPlan({ checklist }: ActionPlanProps) {
                       {/* Copy text */}
                       {item.copy_text && (
                         <div className="relative group">
-                          <div className="p-3 bg-muted/50 rounded-xl text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap font-mono text-xs border border-border/50">
+                          <div className="p-3 pr-10 bg-muted/50 rounded-xl text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap font-mono text-xs border border-border/50">
                             {item.copy_text}
                           </div>
                           <button

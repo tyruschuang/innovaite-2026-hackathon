@@ -8,7 +8,7 @@ export const RESULTS_SUBTITLE =
 export const REVIEW_CTA =
   "This will generate your complete ZIP packet with cover sheet, damage summary, expense ledger, creditor letters, and a 30-minute action plan.";
 
-export const ACTION_PLAN_TITLE = "30-Minute Action Plan";
+export const ACTION_PLAN_TITLE = "Action Plan";
 
 export const SUMMARY_LABEL_LOCATION = "Location";
 export const SUMMARY_LABEL_BUSINESS = "Business";
