@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -15,11 +15,11 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    # CORS
+    # CORS — use wildcard origin; frontend doesn't send credentials
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -36,9 +36,12 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok"}
 
-    # Global exception handler
+    # Global exception handler — re-raise HTTPExceptions so FastAPI's
+    # built-in handler (which respects CORS middleware) handles them.
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, HTTPException):
+            raise exc
         return JSONResponse(
             status_code=500,
             content={"detail": f"Internal server error: {str(exc)}"},

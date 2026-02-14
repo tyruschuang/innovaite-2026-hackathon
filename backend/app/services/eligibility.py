@@ -66,15 +66,15 @@ async def lookup_eligibility(county: str, state: str) -> dict:
 
         decl = Declaration(
             disaster_number=disaster_num,
-            declaration_title=s.get("declarationTitle", ""),
-            incident_type=s.get("incidentType", ""),
-            ih_program=s.get("ihProgramDeclared", False),
-            ia_program=s.get("iaProgramDeclared", False),
-            pa_program=s.get("paProgramDeclared", False),
-            hm_program=s.get("hmProgramDeclared", False),
-            declaration_date=s.get("declarationDate", ""),
-            incident_begin_date=s.get("incidentBeginDate", ""),
-            incident_end_date=s.get("incidentEndDate", ""),
+            declaration_title=s.get("declarationTitle") or "",
+            incident_type=s.get("incidentType") or "",
+            ih_program=bool(s.get("ihProgramDeclared")),
+            ia_program=bool(s.get("iaProgramDeclared")),
+            pa_program=bool(s.get("paProgramDeclared")),
+            hm_program=bool(s.get("hmProgramDeclared")),
+            declaration_date=s.get("declarationDate") or "",
+            incident_begin_date=s.get("incidentBeginDate") or "",
+            incident_end_date=s.get("incidentEndDate") or "",
         )
         declarations.append(decl)
 
