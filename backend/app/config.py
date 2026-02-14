@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
-    # CommonStack (Anthropic-style Messages API)
+    # CommonStack (OpenAI-compatible chat/completions API)
     commonstack_api_key: str = ""
     commonstack_base_url: str = "https://api.commonstack.ai/v1"
-    commonstack_model: str = "gpt-4o-mini"
+    commonstack_model: str = "google/gemini-2.5-flash"
 
     # LLM provider: "commonstack" or "gemini". If commonstack and key set, use CommonStack; else Gemini.
     llm_provider: str = "commonstack"

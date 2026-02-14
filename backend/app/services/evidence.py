@@ -75,18 +75,27 @@ def _build_extraction_prompt(
         text = file_ocr_texts.get(fn, "")
         ocr_blocks.append(f"--- FILE: {fn} ---\n{text or '(no OCR text)'}\n")
 
-    return f"""You are a disaster-relief document analyst. Extract structured expense and damage data using the OCR text below as the source of truth.
+    return f"""You are a disaster-relief document analyst. You will receive both OCR text AND the original images.
+Your job is to extract BOTH structured expense data AND visual damage evidence.
+
+THIS IS A MULTIMODAL TASK — you MUST analyze every attached image visually, not only via OCR text.
 
 DOCUMENT REQUIREMENTS (use for document_type and categorization):
 {doc_reqs_block}
 
-CRITICAL RULES:
+CRITICAL RULES — EXPENSES (text-based documents):
 1. The OCR text below is the SOURCE OF TRUTH for amounts and dates. Do not invent values.
 2. For each expense, set source_text to an exact substring of the OCR text for that file. Set source_file to the filename.
 3. If the amount or date is not present in the OCR text, set confidence to "needs_review".
 4. Set document_type to one of: receipt, utility_bill, lease, payroll, bank_statement, tax, other.
 5. Categories for expenses: rent, utilities, payroll, supplies, repairs, insurance, other.
-6. For damage claims, set source_file to the filename of the photo. Describe what damage is visible.
+
+CRITICAL RULES — DAMAGE CLAIMS (image-based, visual analysis):
+6. VISUALLY INSPECT every attached image. If an image shows physical damage (water damage, fire damage, structural damage, broken equipment, debris, flooding, mold, roof damage, broken windows, etc.), you MUST create a damage_claim for it.
+7. For damage claims, set source_file to the filename of the image. Set source_text to a brief description of what you see in the image.
+8. Damage photos typically have little or no OCR text — that is expected. Analyze them VISUALLY, not via OCR.
+9. Set label to a short description (e.g. "Water damage - kitchen ceiling"), detail to 1-2 sentences describing the visible damage, and confidence to "high" if damage is clearly visible, "medium" if ambiguous.
+10. If a file has "(no OCR text)" below, it is likely a photograph — look at the actual image content carefully for damage evidence.
 
 CONTEXT:
 {context_str}
@@ -94,10 +103,10 @@ CONTEXT:
 UPLOADED FILES ({len(filenames)} files):
 {chr(10).join(f"- {fn}" for fn in filenames)}
 
-OCR TEXT PER FILE:
+OCR TEXT PER FILE (note: damage photos may have no OCR text — analyze them visually instead):
 {chr(10).join(ocr_blocks)}
 
-Extract all expense items and damage evidence. Return valid JSON matching the schema exactly."""
+Extract ALL expense items from text documents AND ALL damage evidence from photos. Every image must be analyzed visually. Return valid JSON matching the schema exactly."""
 
 
 def _generate_rename_map(

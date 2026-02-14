@@ -1,9 +1,15 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.routers import eligibility, runway, evidence, packet, plan
+
+# Show debug logs from our LLM client so we can diagnose CommonStack issues
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("app.services.llm_client").setLevel(logging.DEBUG)
 
 
 def create_app() -> FastAPI:
