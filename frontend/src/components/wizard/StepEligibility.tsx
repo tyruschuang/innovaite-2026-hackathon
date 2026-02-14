@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
-  Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ export function StepEligibility() {
   const { state, dispatch } = useWizard();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeclarations, setShowDeclarations] = useState(false);
 
   const { county, state: stateCode } = state.eligibility;
   const result = state.eligibilityResult;
@@ -181,45 +182,73 @@ export function StepEligibility() {
                 </div>
               </div>
 
-              {/* Declarations */}
-              <div className="space-y-3 mb-4">
-                {result.declarations.map((decl, i) => (
-                  <motion.div
-                    key={decl.disaster_number}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-card rounded-xl border border-border hover:border-success/30 transition-colors"
+              {/* Declarations drawer */}
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => setShowDeclarations((v) => !v)}
+                  className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl bg-card border border-border hover:border-success/30 transition-colors text-left group"
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {result.declarations.length} declaration{result.declarations.length !== 1 ? "s" : ""} found
+                  </span>
+                  <motion.span
+                    animate={{ rotate: showDeclarations ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-semibold text-foreground">
-                          {decl.disaster_number}
-                        </span>
-                        <Badge variant="info" size="sm">
-                          {decl.incident_type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {decl.declaration_title}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {decl.ih_program && (
-                        <Badge variant="success" size="sm">IH</Badge>
-                      )}
-                      {decl.ia_program && (
-                        <Badge variant="success" size="sm">IA</Badge>
-                      )}
-                      {decl.pa_program && (
-                        <Badge variant="success" size="sm">PA</Badge>
-                      )}
-                      {decl.hm_program && (
-                        <Badge variant="success" size="sm">HM</Badge>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </motion.span>
+                </button>
+
+                <motion.div
+                  initial={false}
+                  animate={{
+                    height: showDeclarations ? "auto" : 0,
+                    opacity: showDeclarations ? 1 : 0,
+                  }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-3 pt-3">
+                    {result.declarations.map((decl, i) => (
+                      <motion.div
+                        key={decl.disaster_number}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: showDeclarations ? 1 : 0, x: showDeclarations ? 0 : -8 }}
+                        transition={{ delay: i * 0.05, duration: 0.3 }}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-card rounded-xl border border-border hover:border-success/30 transition-colors"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono text-sm font-semibold text-foreground">
+                              {decl.disaster_number}
+                            </span>
+                            <Badge variant="info" size="sm">
+                              {decl.incident_type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {decl.declaration_title}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {decl.ih_program && (
+                            <Badge variant="success" size="sm">IH</Badge>
+                          )}
+                          {decl.ia_program && (
+                            <Badge variant="success" size="sm">IA</Badge>
+                          )}
+                          {decl.pa_program && (
+                            <Badge variant="success" size="sm">PA</Badge>
+                          )}
+                          {decl.hm_program && (
+                            <Badge variant="success" size="sm">HM</Badge>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
               </div>
 
               {/* Programs */}
