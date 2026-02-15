@@ -10,12 +10,11 @@ import {
   Download,
   FileArchive,
   FileText,
-  FileSpreadsheet,
-  Mail,
   CheckCircle2,
-  Image as ImageIcon,
   ShieldCheck,
 } from "lucide-react";
+import type { PacketFileEntry, ResultsSummary } from "@/lib/types";
+import { PACKET_INCLUDED_FILES_HEADING } from "@/lib/copy";
 
 interface PacketSummaryProps {
   blob: Blob | null;
@@ -23,17 +22,9 @@ interface PacketSummaryProps {
   runwayDays?: number;
   businessName?: string;
   disasterId?: string;
+  resultsSummary?: ResultsSummary | null;
+  filesIncluded?: PacketFileEntry[];
 }
-
-const packetFiles = [
-  { name: "CoverSheet.pdf", icon: <FileText className="h-4 w-4" />, desc: "Business info & disaster ID" },
-  { name: "DamageSummary.pdf", icon: <FileText className="h-4 w-4" />, desc: "Bullet-point damage overview" },
-  { name: "ExpenseLedger.csv", icon: <FileSpreadsheet className="h-4 w-4" />, desc: "Categorized expense data" },
-  { name: "ExpenseLedger.pdf", icon: <FileText className="h-4 w-4" />, desc: "Formatted expense report" },
-  { name: "EvidenceChecklist.pdf", icon: <CheckCircle2 className="h-4 w-4" />, desc: "What's included & what's missing" },
-  { name: "Evidence/", icon: <ImageIcon className="h-4 w-4" />, desc: "Renamed evidence files" },
-  { name: "Letters/", icon: <Mail className="h-4 w-4" />, desc: "Forbearance & waiver letters" },
-];
 
 export function PacketSummary({
   blob,
@@ -41,6 +32,8 @@ export function PacketSummary({
   runwayDays,
   businessName,
   disasterId,
+  resultsSummary,
+  filesIncluded = [],
 }: PacketSummaryProps) {
   const handleDownload = () => {
     if (!blob) return;
@@ -134,28 +127,34 @@ export function PacketSummary({
         </Card>
       </motion.div>
 
-      {/* File list */}
+      {/* File list — driven by backend files_included when available */}
       <Card padding="sm">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
-          Included Files
+          {PACKET_INCLUDED_FILES_HEADING}
         </h3>
         <div className="space-y-0.5">
-          {packetFiles.map((file, i) => (
-            <motion.div
-              key={file.name}
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 + i * 0.06 }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
-            >
-              <span className="text-muted-foreground group-hover:text-foreground transition-colors">{file.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{file.name}</p>
-                <p className="text-xs text-muted-foreground">{file.desc}</p>
-              </div>
-              <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-            </motion.div>
-          ))}
+          {filesIncluded.length > 0 ? (
+            filesIncluded.map((file, i) => (
+              <motion.div
+                key={file.path}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 + i * 0.06 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent transition-colors group"
+              >
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                  <FileText className="h-4 w-4" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{file.path}</p>
+                  <p className="text-xs text-muted-foreground">{file.description}</p>
+                </div>
+                <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+              </motion.div>
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground px-2 py-2">No file list available.</p>
+          )}
         </div>
       </Card>
     </div>

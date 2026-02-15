@@ -1,4 +1,4 @@
-"""LLM gateway — CommonStack (Anthropic-style) or Gemini."""
+"""LLM gateway — CommonStack (OpenAI-compatible) or Gemini."""
 
 import base64
 import json
@@ -29,30 +29,70 @@ def _get_client() -> genai.Client:
 def _build_commonstack_content(
     prompt: str,
     images: list[tuple[bytes, str]] | None = None,
-) -> list[dict[str, Any]]:
-    """Build user message content: text part + optional base64 image parts (images only)."""
+) -> str | list[dict[str, Any]]:
+    """Build user message content in OpenAI format.
+
+    If no images, returns a plain string. With images, returns a list of
+    content parts using OpenAI's multimodal format (image_url with data URIs).
+    """
+    if not images:
+        return prompt
+
     content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
-    if images:
-        for img_bytes, mime_type in images:
-            if mime_type in COMMONSTACK_IMAGE_MIME_TYPES:
-                content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": mime_type,
-                        "data": base64.standard_b64encode(img_bytes).decode("ascii"),
-                    },
-                })
+    for img_bytes, mime_type in images:
+        if mime_type in COMMONSTACK_IMAGE_MIME_TYPES:
+            b64_data = base64.standard_b64encode(img_bytes).decode("ascii")
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{b64_data}",
+                },
+            })
     return content
 
 
 def _extract_text_from_commonstack_response(body: dict) -> str:
-    """Get assistant text from CommonStack Messages API response."""
-    content = body.get("content") or []
-    for block in content:
-        if block.get("type") == "text" and "text" in block:
-            return block["text"]
-    raise ValueError("No text content block in CommonStack response")
+    """Get assistant text from CommonStack (OpenAI-compatible) chat completions response."""
+    choices = body.get("choices") or []
+    if not choices:
+        raise ValueError(f"No choices in CommonStack response. Full body keys: {list(body.keys())}")
+    message = choices[0].get("message") or {}
+    text = message.get("content") or ""
+    if not text:
+        raise ValueError(f"Empty content in CommonStack response message. Message keys: {list(message.keys())}")
+    return text
+
+
+def _extract_json_from_text(text: str) -> str:
+    """Extract JSON from a model response that may include markdown fences or extra text.
+
+    Handles:
+      - ```json ... ```
+      - ``` ... ```
+      - Raw JSON (returns as-is if it starts with { or [)
+      - JSON embedded in surrounding text (finds first { ... last })
+    """
+    import re
+
+    stripped = text.strip()
+
+    # Try stripping markdown code fences: ```json ... ``` or ``` ... ```
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", stripped, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # Already looks like raw JSON
+    if stripped.startswith("{") or stripped.startswith("["):
+        return stripped
+
+    # Find the first { and last } as a fallback
+    first_brace = stripped.find("{")
+    last_brace = stripped.rfind("}")
+    if first_brace != -1 and last_brace > first_brace:
+        return stripped[first_brace : last_brace + 1]
+
+    # Give up — return as-is and let json.loads raise a clear error
+    return stripped
 
 
 async def _commonstack_complete_json(
@@ -61,15 +101,17 @@ async def _commonstack_complete_json(
     images: list[tuple[bytes, str]] | None = None,
     max_retries: int = 1,
 ) -> T:
-    """Call CommonStack Messages API with JSON schema; return validated Pydantic model."""
+    """Call CommonStack chat/completions with JSON output; return validated Pydantic model."""
     settings = get_settings()
-    url = settings.commonstack_base_url.rstrip("/") + "/messages"
+    url = settings.commonstack_base_url.rstrip("/") + "/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.commonstack_api_key}",
         "Content-Type": "application/json",
     }
+    logger.info("CommonStack complete_json → POST %s  model=%s", url, settings.commonstack_model)
     json_schema = schema.model_json_schema()
     last_error: Exception | None = None
+    raw_text = ""
 
     for attempt in range(1 + max_retries):
         try:
@@ -81,17 +123,20 @@ async def _commonstack_complete_json(
                     f"{str(last_error)}\n"
                     f"Please fix the JSON output to conform to the schema."
                 )
-            content = _build_commonstack_content(retry_prompt, images)
+
+            # Append schema to prompt so the model knows the target shape
+            schema_prompt = (
+                f"{retry_prompt}\n\n"
+                f"You MUST respond with ONLY valid JSON matching this schema:\n"
+                f"{json.dumps(json_schema, indent=2)}"
+            )
+
+            content = _build_commonstack_content(schema_prompt, images)
             payload: dict[str, Any] = {
                 "model": settings.commonstack_model,
                 "max_tokens": 4096,
                 "messages": [{"role": "user", "content": content}],
-                "output_config": {
-                    "format": {
-                        "type": "json_schema",
-                        "schema": json_schema,
-                    },
-                },
+                "response_format": {"type": "json_object"},
             }
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(url, headers=headers, json=payload)
@@ -104,17 +149,22 @@ async def _commonstack_complete_json(
                 raise ValueError(
                     f"CommonStack API error: {response.status_code} - {response.text[:200]}"
                 )
-            raw_text = _extract_text_from_commonstack_response(response.json())
+            resp_body = response.json()
+            logger.debug("CommonStack raw response: %s", json.dumps(resp_body, default=str)[:1000])
+            raw_text = _extract_text_from_commonstack_response(resp_body)
             if not raw_text:
                 raise ValueError("Empty text in CommonStack response")
-            parsed = json.loads(raw_text)
+            logger.debug("CommonStack content text (first 500 chars): %s", raw_text[:500])
+            cleaned_json = _extract_json_from_text(raw_text)
+            parsed = json.loads(cleaned_json)
             return schema.model_validate(parsed)
         except (ValidationError, json.JSONDecodeError, ValueError) as e:
             last_error = e
             logger.warning(
-                "CommonStack JSON response validation failed (attempt %s): %s",
+                "CommonStack JSON response validation failed (attempt %s): %s  |  raw_text[:200]=%s",
                 attempt + 1,
                 e,
+                raw_text[:200],
             )
             continue
     raise last_error  # type: ignore[misc]
@@ -125,17 +175,19 @@ async def _commonstack_complete_text(
     max_tokens: int = 500,
     temperature: float = 0.3,
 ) -> str:
-    """Call CommonStack Messages API for plain text completion."""
+    """Call CommonStack chat/completions for plain text completion."""
     settings = get_settings()
-    url = settings.commonstack_base_url.rstrip("/") + "/messages"
+    url = settings.commonstack_base_url.rstrip("/") + "/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.commonstack_api_key}",
         "Content-Type": "application/json",
     }
+    logger.info("CommonStack complete_text → POST %s  model=%s", url, settings.commonstack_model)
     payload: dict[str, Any] = {
         "model": settings.commonstack_model,
         "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(url, headers=headers, json=payload)

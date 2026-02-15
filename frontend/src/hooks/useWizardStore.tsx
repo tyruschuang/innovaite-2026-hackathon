@@ -14,6 +14,8 @@ import type {
   EligibilityRequest,
   EvidenceExtractionResponse,
   PlanResponse,
+  ResultsSummary,
+  PacketFileEntry,
   UserInfo,
   Declaration,
   ExpenseItem,
@@ -49,6 +51,8 @@ export interface WizardState {
   planResult: PlanResponse | null;
   packetBlob: Blob | null;
   packetFilename: string;
+  resultsSummary: ResultsSummary | null;
+  filesIncluded: PacketFileEntry[];
 
   // UI state
   loading: boolean;
@@ -87,6 +91,8 @@ const initialState: WizardState = {
   planResult: null,
   packetBlob: null,
   packetFilename: "Remedy_packet.zip",
+  resultsSummary: null,
+  filesIncluded: [],
 
   loading: false,
   error: null,
@@ -106,7 +112,13 @@ type WizardAction =
   | { type: "SET_EVIDENCE_RESULT"; data: EvidenceExtractionResponse }
   | { type: "SET_USER_INFO"; data: Partial<UserInfo> }
   | { type: "SET_PLAN_RESULT"; data: PlanResponse }
-  | { type: "SET_PACKET"; blob: Blob; filename: string }
+  | {
+      type: "SET_PACKET";
+      blob: Blob;
+      filename: string;
+      resultsSummary: ResultsSummary | null;
+      filesIncluded: PacketFileEntry[];
+    }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_ERROR"; error: string | null }
   | { type: "RESET" };
@@ -164,6 +176,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         packetBlob: action.blob,
         packetFilename: action.filename,
+        resultsSummary: action.resultsSummary,
+        filesIncluded: action.filesIncluded,
       };
     case "SET_LOADING":
       return { ...state, loading: action.loading };

@@ -63,6 +63,7 @@ export interface ExpenseItem {
   confidence: ConfidenceLevel;
   source_file: string;
   source_text: string;
+  document_type?: string;
 }
 
 export interface RenameEntry {
@@ -75,6 +76,7 @@ export interface DamageClaim {
   label: string;
   detail: string;
   confidence: ConfidenceLevel;
+  source_file: string;
   source_text: string;
 }
 
@@ -98,7 +100,41 @@ export interface EvidenceExtractionResponse {
   missing_evidence: MissingEvidence[];
 }
 
+// --- Insights ---
+
+export type InsightUrgency = "critical" | "action_needed" | "informational";
+
+export interface KeyInsight {
+  title: string;
+  detail: string;
+  urgency: InsightUrgency;
+}
+
 // --- Packet ---
+
+export interface PacketFileEntry {
+  path: string;
+  description: string;
+}
+
+export interface ResultsSummary {
+  damage_claim_count: number;
+  expense_count: number;
+  letter_count: number;
+  runway_days: number;
+  business_name: string;
+  disaster_id: string;
+  one_line_summary: string;
+  key_insights: KeyInsight[];
+  urgency_level: string;
+}
+
+export interface PacketBuildResponse {
+  zip_base64: string;
+  filename: string;
+  results_summary: ResultsSummary;
+  files_included: PacketFileEntry[];
+}
 
 export interface UserInfo {
   business_name: string;

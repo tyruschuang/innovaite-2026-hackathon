@@ -28,6 +28,10 @@ class ExpenseItem(BaseModel):
         ...,
         description="Literal text snippet from the document that this value was derived from",
     )
+    document_type: str = Field(
+        default="",
+        description="Type of document: receipt, utility_bill, lease, payroll, bank_statement, tax, other",
+    )
 
 
 class RenameEntry(BaseModel):
@@ -48,8 +52,7 @@ class DamageClaim(BaseModel):
     detail: str = Field(..., description="1-2 sentence description of the damage")
     confidence: ConfidenceLevel
     source_file: str = Field(
-        ...,
-        description="Original filename of the image this damage was extracted from.",
+        ..., description="Original filename this damage was extracted from"
     )
     source_text: str = Field(
         ...,

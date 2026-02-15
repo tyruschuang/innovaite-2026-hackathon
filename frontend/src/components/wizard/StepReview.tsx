@@ -4,6 +4,13 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useWizard } from "@/hooks/useWizardStore";
 import { buildPacket, generatePlan } from "@/lib/api";
+import {
+  REVIEW_CTA,
+  SUMMARY_LABEL_LOCATION,
+  SUMMARY_LABEL_BUSINESS,
+  SUMMARY_LABEL_RUNWAY,
+  SUMMARY_LABEL_EVIDENCE,
+} from "@/lib/copy";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -94,22 +101,17 @@ export function StepReview() {
         has_insurance: true,
       };
 
-      const [blob, planData] = await Promise.all([
+      const [packetResult, planData] = await Promise.all([
         buildPacket(packetRequest),
         generatePlan(planRequest),
       ]);
 
-      const safeName =
-        state.userInfo.business_name
-          .replace(/[^a-zA-Z0-9\s-_]/g, "")
-          .trim()
-          .replace(/\s+/g, "_")
-          .slice(0, 50) || "submission";
-
       dispatch({
         type: "SET_PACKET",
-        blob,
-        filename: `Remedy_${safeName}_packet.zip`,
+        blob: packetResult.blob,
+        filename: packetResult.filename,
+        resultsSummary: packetResult.resultsSummary,
+        filesIncluded: packetResult.filesIncluded,
       });
       dispatch({ type: "SET_PLAN_RESULT", data: planData });
       dispatch({ type: "NEXT_STEP" });
@@ -128,7 +130,7 @@ export function StepReview() {
     {
       key: "location",
       icon: <MapPin className="h-4 w-4 text-info" />,
-      label: "Location",
+      label: SUMMARY_LABEL_LOCATION,
       value: state.eligibilityResult
         ? `${state.eligibilityResult.county} County, ${state.eligibilityResult.state}`
         : "Not checked",
@@ -140,7 +142,7 @@ export function StepReview() {
     {
       key: "business",
       icon: <Building2 className="h-4 w-4 text-violet-500" />,
-      label: "Business",
+      label: SUMMARY_LABEL_BUSINESS,
       value: state.runway.business_type || "Not specified",
       detail: `${state.runway.num_employees} employees · ${state.runway.days_closed} days closed`,
       isReady: !!state.runway.business_type,
@@ -148,7 +150,7 @@ export function StepReview() {
     {
       key: "runway",
       icon: <TrendingUp className="h-4 w-4 text-amber" />,
-      label: "Runway",
+      label: SUMMARY_LABEL_RUNWAY,
       value: state.runwayResult
         ? `${Math.round(state.runwayResult.runway_days)} days remaining`
         : "Not calculated",
@@ -160,7 +162,7 @@ export function StepReview() {
     {
       key: "evidence",
       icon: <Camera className="h-4 w-4 text-success" />,
-      label: "Evidence",
+      label: SUMMARY_LABEL_EVIDENCE,
       value: `${state.evidenceFiles.length} files uploaded`,
       detail: state.evidenceResult
         ? `${state.evidenceResult.expense_items.length} expenses · ${state.evidenceResult.damage_claims.length} claims`
@@ -356,9 +358,7 @@ export function StepReview() {
           )}
         </ShimmerButton>
         <p className="text-xs text-muted-foreground text-center mt-3">
-          This will generate your complete ZIP packet with cover sheet, damage
-          summary, expense ledger, creditor letters, and a 30-minute action
-          plan.
+          {REVIEW_CTA}
         </p>
       </motion.div>
 

@@ -5,8 +5,11 @@ import type {
   EvidenceContext,
   EvidenceExtractionResponse,
   PacketBuildRequest,
+  PacketBuildResponse,
+  PacketFileEntry,
   PlanGenerateRequest,
   PlanResponse,
+  ResultsSummary,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -74,17 +77,43 @@ export async function extractEvidence(
 
 // ── Packet Build ─────────────────────────────────────────────
 
-export async function buildPacket(data: PacketBuildRequest): Promise<Blob> {
+export interface BuildPacketResult {
+  blob: Blob;
+  filename: string;
+  resultsSummary: ResultsSummary;
+  filesIncluded: PacketFileEntry[];
+}
+
+async function base64ToBlob(base64: string, mimeType: string): Promise<Blob> {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
+}
+
+export async function buildPacket(
+  data: PacketBuildRequest
+): Promise<BuildPacketResult> {
   const res = await fetch(`${API_BASE}/packet/build`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(body.detail || "Failed to build packet", res.status);
+    throw new ApiError(
+      json.detail || "Failed to build packet",
+      res.status
+    );
   }
-  return res.blob();
+  const payload = json as PacketBuildResponse;
+  const blob = await base64ToBlob(payload.zip_base64, "application/zip");
+  return {
+    blob,
+    filename: payload.filename,
+    resultsSummary: payload.results_summary,
+    filesIncluded: payload.files_included,
+  };
 }
 
 // ── Plan Generate ────────────────────────────────────────────
