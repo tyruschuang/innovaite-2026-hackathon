@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Particles } from "@/components/magicui/Particles";
 import { RotateCcw, PartyPopper } from "lucide-react";
 import { RESULTS_HEADLINE, RESULTS_SUBTITLE } from "@/lib/copy";
+import { Footer } from "@/components/Footer";
 
 export function ResultsView() {
   const { state, dispatch } = useWizard();
@@ -62,9 +63,17 @@ export function ResultsView() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-muted-foreground max-w-lg mx-auto text-lg"
+            className="text-muted-foreground max-w-lg mx-auto text-lg mb-2"
           >
             {resultsSummary?.one_line_summary ?? RESULTS_SUBTITLE}
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="text-sm text-muted-foreground/80 italic"
+          >
+            Your packet, powered by Remedy
           </motion.p>
         </div>
       </div>
@@ -108,7 +117,7 @@ export function ResultsView() {
               />
 
               {/* Start over */}
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <Button
                   variant="ghost"
                   onClick={() => dispatch({ type: "RESET" })}
@@ -117,11 +126,16 @@ export function ResultsView() {
                 >
                   Start Over
                 </Button>
+                <p className="text-xs text-muted-foreground/70">
+                  Share your success — made with Remedy
+                </p>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

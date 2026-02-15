@@ -55,7 +55,16 @@ class DamageClaim(BaseModel):
         ..., description="Original filename this damage was extracted from"
     )
     source_text: str = Field(
-        ..., description="Text or visual description from the source document"
+        ...,
+        description="Literal text from the image if any (e.g. signage, labels); otherwise a short visual description of what is shown (e.g. 'Visual: water damage on ceiling, visible staining').",
+    )
+    damage_type: str | None = Field(
+        default=None,
+        description="Type of damage if apparent, e.g. water, structural, equipment, wind.",
+    )
+    severity: str | None = Field(
+        default=None,
+        description="Severity if apparent, e.g. minor, moderate, severe.",
     )
 
 
