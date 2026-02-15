@@ -1,5 +1,6 @@
 #  Remedy 
-- innovaite-2026-hackathon.vercel.app
+  - [Deployed App](https://innovaite-2026-hackathon.vercel.app/)
+
 - The risk mitigation tool to save communities
 
 ---
@@ -29,7 +30,9 @@
   - Better context - Find APIs and customize AI models for different counties and areas based off environmental conditions 
 
 ---
-
+## Screenshots
+<img width="1470" height="830" alt="remedy" src="https://github.com/user-attachments/assets/8d4a8943-f095-4c0e-8c11-9b59fd46fa11" />
+    
 ## Set Up Instructions
   - Deployed fullstack: innovaite-2026-hackathon.vercel.app
   
@@ -54,3 +57,8 @@ uvicorn ap
 # frontend
 cd frontend
 npm run dev
+```
+## Collaborators
+  - Tyrus Chaung
+  - Savir Khanna
+
