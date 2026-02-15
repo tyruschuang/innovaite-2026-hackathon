@@ -121,7 +121,7 @@ def _build_cover_sheet(
     story = []
 
     # Title
-    story.append(Paragraph("ReliefBridge — Submission Cover Sheet", TITLE_STYLE))
+    story.append(Paragraph("Remedy — Submission Cover Sheet", TITLE_STYLE))
     story.append(Spacer(1, 12))
 
     # Date
@@ -400,7 +400,7 @@ def _build_overall_summary_pdf(
     need_2_4_weeks = request.daily_burn * 21 if request.daily_burn else 0
 
     # 1. Title and overview
-    story.append(Paragraph("Overall Summary — ReliefBridge Submission Packet", TITLE_STYLE))
+    story.append(Paragraph("Overall Summary — Remedy Submission Packet", TITLE_STYLE))
     story.append(Paragraph(
         f"Generated: {datetime.now().strftime('%B %d, %Y')}",
         BODY_STYLE,

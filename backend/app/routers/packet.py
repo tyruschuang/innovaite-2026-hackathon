@@ -14,7 +14,7 @@ router = APIRouter()
 def _safe_filename(business_name: str) -> str:
     safe = "".join(c if c.isalnum() or c in "-_ " else "" for c in (business_name or "submission"))
     safe = safe.strip().replace(" ", "_")[:50] or "submission"
-    return f"ReliefBridge_{safe}_packet.zip"
+    return f"Remedy_{safe}_packet.zip"
 
 
 @router.post("/build", response_model=PacketBuildResponse)

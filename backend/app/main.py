@@ -16,7 +16,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="ReliefBridge API",
+        title="Remedy API",
         description="Money-in-hand fastest path generator for disaster-impacted small businesses and nonprofits.",
         version="0.1.0",
     )

@@ -1,7 +1,7 @@
 {
   "name": "innovaite-2026-hackathon",
   "private": true,
-  "description": "ReliefBridge / Remedy — disaster relief packet generator",
+  "description": "Remedy — disaster relief packet generator",
   "scripts": {
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",

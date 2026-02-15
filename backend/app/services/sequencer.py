@@ -129,7 +129,7 @@ def _build_action_library(
             success_prob=1.0,
             requires=["camera/phone"],
             produces=["damage photos", "damage notes"],
-            copy_text="Take photos of all damage. Note dates, descriptions, and estimated costs. Upload to ReliefBridge for processing.",
+            copy_text="Take photos of all damage. Note dates, descriptions, and estimated costs. Upload to Remedy for processing.",
         )
     )
 

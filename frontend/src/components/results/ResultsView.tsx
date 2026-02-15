@@ -38,43 +38,39 @@ export function ResultsView() {
         />
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center relative">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 12 }}
-            className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-success-light border border-success/20 mb-5"
-          >
-            <PartyPopper className="h-8 w-8 text-success" />
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight mb-3"
-          >
-            {RESULTS_HEADLINE}
-            {resultsSummary?.urgency_level && (
-              <span className={`ml-3 text-base font-semibold ${urgency.color}`}>
-                ({urgency.label} Priority)
-              </span>
-            )}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-muted-foreground max-w-lg mx-auto text-lg mb-2"
-          >
-            {resultsSummary?.one_line_summary ?? RESULTS_SUBTITLE}
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-sm text-muted-foreground/80 italic"
-          >
-            Your packet, powered by Remedy
-          </motion.p>
+          <div className="inline-flex items-center justify-center gap-5">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 200, damping: 12 }}
+              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-success-light border border-success/20 flex-shrink-0"
+            >
+              <PartyPopper className="h-7 w-7 text-success" />
+            </motion.div>
+            <div className="text-left">
+              <motion.h1
+                initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight"
+              >
+                {RESULTS_HEADLINE}
+                {resultsSummary?.urgency_level && (
+                  <span className={`ml-3 text-base font-semibold ${urgency.color}`}>
+                    ({urgency.label} Priority)
+                  </span>
+                )}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-muted-foreground text-lg mt-1"
+              >
+                {resultsSummary?.one_line_summary ?? RESULTS_SUBTITLE}
+              </motion.p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -126,9 +122,6 @@ export function ResultsView() {
                 >
                   Start Over
                 </Button>
-                <p className="text-xs text-muted-foreground/70">
-                  Share your success — made with Remedy
-                </p>
               </div>
             </div>
           </motion.div>

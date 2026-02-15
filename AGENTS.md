@@ -1,4 +1,4 @@
-## ReliefBridge (MVP) — Agent-Optimized Project Summary
+## Remedy (MVP) — Agent-Optimized Project Summary
 
 ### Mission
 
@@ -17,7 +17,7 @@ In the first **2–8 weeks after a catastrophe**, many entities fail **not from 
 * **admin friction** (evidence gathering, forms, back-and-forth)
 * **delayed relief timelines** (SBA/FEMA latency)
 
-ReliefBridge aims to reduce “time-to-submittable” from **days → ~30 minutes** and create immediate runway via **structured forbearance/waiver requests** and **bill prioritization**.
+Remedy aims to reduce “time-to-submittable” from **days → ~30 minutes** and create immediate runway via **structured forbearance/waiver requests** and **bill prioritization**.
 
 ---
 
@@ -238,7 +238,7 @@ If lint fails → fall back to fully templated letter.
 
 # Demo Script (2 minutes)
 
-1. Pick a county impacted by a hurricane; ReliefBridge finds FEMA declaration + county coverage.
+1. Pick a county impacted by a hurricane; Remedy finds FEMA declaration + county coverage.
 2. Enter a bakery scenario: 9 employees, rent + payroll, cash on hand → shows runway days.
 3. Upload 5 receipts/photos → evidence auto-builder generates ledger + renamed files + damage summary bullets.
 4. Click Generate → download ZIP + see “Do this in 30 minutes” list with letters attached.

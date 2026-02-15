@@ -1,4 +1,4 @@
-# Testing ReliefBridge Backend with Postman
+# Testing Remedy Backend with Postman
 
 **Base URL:** `http://localhost:8000` (start the server with `uvicorn app.main:app --reload` from the `backend` folder)
 
@@ -197,7 +197,7 @@ Build the complete submission packet ZIP. Requires a large JSON body that combin
 }
 ```
 
-**Expected response (200):** Binary ZIP file. In Postman, use **Send and Download** or ensure response is saved as a file. Headers include `Content-Disposition: attachment; filename="ReliefBridge_..._packet.zip"`.
+**Expected response (200):** Binary ZIP file. In Postman, use **Send and Download** or ensure response is saved as a file. Headers include `Content-Disposition: attachment; filename="Remedy_..._packet.zip"`.
 
 ---
 
@@ -240,4 +240,4 @@ No API key needed for these datasets; download files and upload them in Postman 
 
 ## Importing into Postman
 
-You can create a new Collection (e.g. "ReliefBridge"), add the 6 requests above, and set a collection variable `base_url` = `http://localhost:8000` so each request URL is `{{base_url}}/eligibility/lookup`, etc.
+You can create a new Collection (e.g. "Remedy"), add the 6 requests above, and set a collection variable `base_url` = `http://localhost:8000` so each request URL is `{{base_url}}/eligibility/lookup`, etc.
