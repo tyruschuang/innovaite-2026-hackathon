@@ -1,13 +1,13 @@
 #  Remedy 
-
- The disaster relief product for small business; building a suitable action plan for recovery
+innovaite-2026-hackathon.vercel.app
+The disaster relief product for small business; building a suitable action plan for recovery
 
 ---
 
 ## Details
 
 - **What problem does this project solve?**  
-  Remedy addresses this by cutting time-to-submittable from days to about 30 minutes. It helps owners quickly create a submission-ready packet (cover sheet, damage summary, expense ledger, letters, evidence) and a 30-minute action plan, so they can immediately request rent forbearance, utility waivers, and lender extensions while applying for SBA/FEMA relief. The goal is to buy 2–4 weeks of runway and reduce friction during the worst period of the liquidity crunch.
+  Remedy addresses disaster relief concerns by cutting time-to-submittable from days to about 30 minutes. It helps owners quickly create a submission-ready packet (cover sheet, damage summary, expense ledger, letters, evidence) and a 30-minute action plan, so they can immediately request rent forbearance, utility waivers, and lender extensions while applying for SBA/FEMA relief. The goal is to buy 2–4 weeks of runway and reduce friction during the worst period of the liquidity crunch.
 
 
 - **Did you use any interesting libraries or services?**  
@@ -32,6 +32,8 @@
 ---
 
 ## Set Up Instructions
+  - Deployed fullstack: innovaite-2026-hackathon.vercel.app
+  
   - Install requirements.txt in backend.
   - Setup an .env file with your Commonstack.ai API key
   - You need both the backend and frontend running. The frontend calls the backend API at http://127.0.0.1:8000 by default.
