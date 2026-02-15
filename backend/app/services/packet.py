@@ -35,7 +35,17 @@ from reportlab.platypus import (
 from app.models.actions import ChecklistItem
 from app.models.evidence import DamageClaim, ExpenseItem, MissingEvidence, RenameEntry
 from app.models.inputs import Declaration, PacketBuildRequest, UserInfo
-from app.models.outputs import DeferrableEstimate, PacketFileEntry, ResultsSummary
+from app.models.outputs import (
+    CompletenessScore,
+    Deadline,
+    DeferrableEstimate,
+    DisasterBenchmark,
+    PacketFileEntry,
+    ResultsSummary,
+)
+from app.services.benchmarks import fetch_disaster_benchmarks
+from app.services.completeness import score_completeness
+from app.services.deadlines import compute_deadlines
 from app.services.insights import (
     ActionNarrativesResult,
     FinancialBreakdownResult,
@@ -389,6 +399,9 @@ def _build_overall_summary_pdf(
     situation: SituationAnalysisResult | None = None,
     financial: FinancialBreakdownResult | None = None,
     narratives: ActionNarrativesResult | None = None,
+    deadlines: list[Deadline] | None = None,
+    benchmark: DisasterBenchmark | None = None,
+    completeness: CompletenessScore | None = None,
 ) -> bytes:
     """Generate OverallSummary.pdf: holistic overview, AI insights, numbers, steps, resources."""
     buf = io.BytesIO()
@@ -417,6 +430,94 @@ def _build_overall_summary_pdf(
     if situation and situation.assessment_text:
         story.append(Paragraph("Situation Assessment", HEADING_STYLE))
         _add_ai_section(story, situation.assessment_text)
+
+    # --- Deadline Countdowns ---
+    if deadlines:
+        story.append(Paragraph("Critical Filing Deadlines", HEADING_STYLE))
+        dl_data = [["Program", "Deadline", "Days Left", "Status"]]
+        for dl in deadlines:
+            status = "EXPIRED" if dl.is_expired else ("URGENT" if dl.days_remaining <= 7 else "OK")
+            dl_data.append([
+                dl.program,
+                dl.due_date,
+                str(dl.days_remaining),
+                status,
+            ])
+        dl_table = Table(dl_data, colWidths=[2.5 * inch, 1.5 * inch, 1 * inch, 1 * inch])
+        dl_table.setStyle(TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4472C4")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        # Color-code expired/urgent rows
+        for row_idx, dl in enumerate(deadlines, start=1):
+            if dl.is_expired:
+                dl_table.setStyle(TableStyle([
+                    ("TEXTCOLOR", (2, row_idx), (3, row_idx), colors.HexColor("#DC2626")),
+                    ("FONTNAME", (3, row_idx), (3, row_idx), "Helvetica-Bold"),
+                ]))
+            elif dl.days_remaining <= 7:
+                dl_table.setStyle(TableStyle([
+                    ("TEXTCOLOR", (2, row_idx), (3, row_idx), colors.HexColor("#D97706")),
+                    ("FONTNAME", (3, row_idx), (3, row_idx), "Helvetica-Bold"),
+                ]))
+        story.append(dl_table)
+        story.append(Spacer(1, 12))
+
+    # --- SBA / FEMA Historical Benchmark ---
+    if benchmark and benchmark.available:
+        story.append(Paragraph("How Others Fared — FEMA Disaster Data", HEADING_STYLE))
+        bench_lines = []
+        if benchmark.disaster_title:
+            bench_lines.append(f"<b>Disaster:</b> {benchmark.disaster_title}")
+        if benchmark.incident_type:
+            bench_lines.append(f"<b>Incident type:</b> {benchmark.incident_type}")
+        if benchmark.total_amount_ihp_approved is not None:
+            bench_lines.append(
+                f"<b>Total Individual &amp; Households Assistance approved:</b> "
+                f"${benchmark.total_amount_ihp_approved:,.0f}"
+            )
+        if benchmark.total_amount_ha_approved is not None:
+            bench_lines.append(
+                f"<b>Total Housing Assistance approved:</b> "
+                f"${benchmark.total_amount_ha_approved:,.0f}"
+            )
+        if benchmark.total_amount_ona_approved is not None:
+            bench_lines.append(
+                f"<b>Total Other Needs Assistance approved:</b> "
+                f"${benchmark.total_amount_ona_approved:,.0f}"
+            )
+        if benchmark.total_applicants is not None:
+            bench_lines.append(
+                f"<b>Total approved applicants:</b> {benchmark.total_applicants:,}"
+            )
+        for line in bench_lines:
+            story.append(Paragraph(line, BODY_STYLE))
+        story.append(Paragraph(
+            "<i>Source: OpenFEMA FemaWebDisasterSummaries — live aggregate data</i>",
+            ParagraphStyle("Source", parent=BODY_STYLE, fontSize=8, textColor=colors.grey),
+        ))
+        story.append(Spacer(1, 12))
+
+    # --- Packet Completeness ---
+    if completeness:
+        story.append(Paragraph(
+            f"Packet Completeness: {completeness.score}%", HEADING_STYLE
+        ))
+        story.append(Paragraph(completeness.summary, BODY_STYLE))
+        story.append(Spacer(1, 4))
+        for ci in completeness.items:
+            marker = "✓" if ci.present else "✗"
+            weight_label = {1: "", 2: " (important)", 3: " (critical)"}.get(ci.weight, "")
+            line = f"{marker} <b>{ci.item}</b>{weight_label}"
+            if not ci.present and ci.reason:
+                line += f" — <i>{ci.reason}</i>"
+            story.append(Paragraph(line, BODY_STYLE))
+        story.append(Spacer(1, 12))
 
     # 2. Your numbers
     story.append(Paragraph("Your Numbers", HEADING_STYLE))
@@ -647,8 +748,24 @@ async def build_packet(
         runway_days=request.runway_days,
     )
 
-    situation_result, financial_result, narratives_result = await asyncio.gather(
-        situation_task, financial_task, narratives_task,
+    # --- Deterministic computations (no await needed) ---
+    deadline_list = compute_deadlines(request.declarations)
+
+    completeness_result = score_completeness(
+        rename_map=request.rename_map,
+        missing_evidence=request.missing_evidence,
+        has_expense_items=len(request.expense_items) > 0,
+        has_damage_claims=len(request.damage_claims) > 0,
+        has_letters=True,  # letters are always generated
+    )
+
+    # --- Concurrent: AI insights + benchmark API call ---
+    benchmark_task = fetch_disaster_benchmarks(request.disaster_id)
+
+    situation_result, financial_result, narratives_result, benchmark_result = (
+        await asyncio.gather(
+            situation_task, financial_task, narratives_task, benchmark_task,
+        )
     )
 
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -661,6 +778,9 @@ async def build_packet(
             situation=situation_result,
             financial=financial_result,
             narratives=narratives_result,
+            deadlines=deadline_list,
+            benchmark=benchmark_result,
+            completeness=completeness_result,
         )
         zf.writestr("OverallSummary.pdf", overall_pdf)
         files_included_paths.append("OverallSummary.pdf")
@@ -752,5 +872,8 @@ async def build_packet(
         one_line_summary=one_line_summary,
         key_insights=situation_result.key_insights if situation_result else [],
         urgency_level=situation_result.urgency_level if situation_result else "moderate",
+        deadlines=deadline_list,
+        benchmark=benchmark_result,
+        completeness=completeness_result,
     )
     return zip_buf.getvalue(), files_included, results_summary

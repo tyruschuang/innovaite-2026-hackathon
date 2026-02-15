@@ -110,6 +110,48 @@ export interface KeyInsight {
   urgency: InsightUrgency;
 }
 
+// --- Deadlines ---
+
+export interface Deadline {
+  program: string;
+  due_date: string;
+  days_remaining: number;
+  is_expired: boolean;
+}
+
+// --- Benchmarks ---
+
+export interface DisasterBenchmark {
+  disaster_number: string;
+  disaster_title: string;
+  total_amount_ihp_approved: number | null;
+  total_amount_ha_approved: number | null;
+  total_amount_ona_approved: number | null;
+  total_applicants: number | null;
+  total_approved_ihp: number | null;
+  state: string;
+  declaration_date: string;
+  incident_type: string;
+  available: boolean;
+}
+
+// --- Completeness ---
+
+export interface CompletenessItem {
+  item: string;
+  present: boolean;
+  weight: number;
+  reason: string;
+}
+
+export interface CompletenessScore {
+  score: number;
+  items: CompletenessItem[];
+  present_count: number;
+  missing_count: number;
+  summary: string;
+}
+
 // --- Packet ---
 
 export interface PacketFileEntry {
@@ -127,6 +169,9 @@ export interface ResultsSummary {
   one_line_summary: string;
   key_insights: KeyInsight[];
   urgency_level: string;
+  deadlines: Deadline[];
+  benchmark: DisasterBenchmark | null;
+  completeness: CompletenessScore | null;
 }
 
 export interface PacketBuildResponse {

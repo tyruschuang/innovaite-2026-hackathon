@@ -31,6 +31,72 @@ class KeyInsight(BaseModel):
     )
 
 
+# ---------------------------------------------------------------------------
+# Deadline Countdowns
+# ---------------------------------------------------------------------------
+
+class Deadline(BaseModel):
+    """A single filing/application deadline computed from declaration date."""
+
+    program: str = Field(..., description="Program name, e.g. 'SBA Physical Damage Loan'")
+    due_date: str = Field(..., description="ISO date string YYYY-MM-DD")
+    days_remaining: int = Field(..., description="Days until deadline (negative = expired)")
+    is_expired: bool = Field(False, description="True if the deadline has passed")
+
+
+# ---------------------------------------------------------------------------
+# SBA / FEMA Historical Benchmarks
+# ---------------------------------------------------------------------------
+
+class DisasterBenchmark(BaseModel):
+    """Aggregate FEMA stats for the matched disaster — from FemaWebDisasterSummaries."""
+
+    disaster_number: str = ""
+    disaster_title: str = ""
+    total_amount_ihp_approved: float | None = Field(
+        None, description="Total Individual & Households Program $ approved"
+    )
+    total_amount_ha_approved: float | None = Field(
+        None, description="Total Housing Assistance $ approved"
+    )
+    total_amount_ona_approved: float | None = Field(
+        None, description="Total Other Needs Assistance $ approved"
+    )
+    total_applicants: int | None = Field(
+        None, description="Total number of applicants"
+    )
+    total_approved_ihp: int | None = Field(
+        None, description="Total number of IHP approvals"
+    )
+    state: str = ""
+    declaration_date: str = ""
+    incident_type: str = ""
+    available: bool = Field(True, description="False if the API returned no data")
+
+
+# ---------------------------------------------------------------------------
+# Packet Completeness Score
+# ---------------------------------------------------------------------------
+
+class CompletenessItem(BaseModel):
+    """A single item in the completeness checklist."""
+
+    item: str = Field(..., description="Document/evidence type name")
+    present: bool = Field(False, description="Whether the item is present in the packet")
+    weight: int = Field(1, description="Relative importance weight (1-3)")
+    reason: str = Field("", description="Why it's missing, if missing")
+
+
+class CompletenessScore(BaseModel):
+    """Overall completeness assessment of the submission packet."""
+
+    score: int = Field(..., description="0-100 completeness percentage")
+    items: list[CompletenessItem] = Field(default_factory=list)
+    present_count: int = 0
+    missing_count: int = 0
+    summary: str = Field("", description="One-line summary of completeness")
+
+
 class EligibilityResponse(BaseModel):
     disaster_id: str = Field(..., description="Primary FEMA disaster declaration number")
     declarations: list[Declaration]
@@ -86,6 +152,16 @@ class ResultsSummary(BaseModel):
     urgency_level: str = Field(
         default="moderate",
         description="Overall urgency classification: critical / urgent / moderate",
+    )
+    deadlines: list[Deadline] = Field(
+        default_factory=list,
+        description="Filing deadline countdowns computed from declaration date",
+    )
+    benchmark: DisasterBenchmark | None = Field(
+        None, description="Historical FEMA aggregate data for this disaster"
+    )
+    completeness: CompletenessScore | None = Field(
+        None, description="Packet completeness assessment"
     )
 
 

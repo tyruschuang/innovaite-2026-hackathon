@@ -3,8 +3,12 @@
 import { motion } from "framer-motion";
 import { useWizard } from "@/hooks/useWizardStore";
 import { ActionPlan } from "./ActionPlan";
+import { BenchmarkCard } from "./BenchmarkCard";
+import { CompletenessRing } from "./CompletenessRing";
+import { DeadlineCountdowns } from "./DeadlineCountdowns";
 import { KeyInsights } from "./KeyInsights";
 import { PacketSummary } from "./PacketSummary";
+import { ScenarioModeler } from "./ScenarioModeler";
 import { Button } from "@/components/ui/Button";
 import { Particles } from "@/components/magicui/Particles";
 import { RotateCcw, PartyPopper } from "lucide-react";
@@ -80,6 +84,34 @@ export function ResultsView() {
           <KeyInsights insights={resultsSummary.key_insights} />
         </div>
       )}
+
+      {/* Data-driven feature panels */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6">
+        {/* Row 1: Deadlines + Benchmark side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {resultsSummary?.deadlines && resultsSummary.deadlines.length > 0 && (
+            <DeadlineCountdowns deadlines={resultsSummary.deadlines} />
+          )}
+          {resultsSummary?.benchmark && resultsSummary.benchmark.available && (
+            <BenchmarkCard benchmark={resultsSummary.benchmark} />
+          )}
+        </div>
+
+        {/* Row 2: Completeness + Scenario Modeler side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {resultsSummary?.completeness && (
+            <CompletenessRing completeness={resultsSummary.completeness} />
+          )}
+          {state.runwayResult && (
+            <ScenarioModeler
+              baselineRunwayDays={state.runwayResult.runway_days}
+              dailyBurn={state.runwayResult.daily_burn}
+              cashOnHand={state.runway.cash_on_hand}
+              deferrableEstimates={state.runwayResult.deferrable_estimates}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Two-column content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
